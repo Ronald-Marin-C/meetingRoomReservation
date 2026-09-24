@@ -2,6 +2,7 @@ package fr.emse.ismin.reservation.repositories;
 
 import fr.emse.ismin.reservation.models.Room;
 import fr.emse.ismin.reservation.models.RoomStatus;
+import fr.emse.ismin.reservation.models.TextNormalizer;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -26,7 +27,9 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
      * @param name the name to look for
      * @return {@code true} if the name is already taken
      */
-    boolean existsByNameIgnoreCase(String name);
+    default boolean existsByNameIgnoreCase(String name) {
+        return existsByNormalizedName(TextNormalizer.normalize(name));
+    }
 
     /**
      * Checks whether another room than the given one already uses this name, ignoring case.
@@ -36,7 +39,22 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
      * @param id   the id of the room being updated
      * @return {@code true} if the name is taken by another room
      */
-    boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
+    default boolean existsByNameIgnoreCaseAndIdNot(String name, Long id) {
+        return existsByNormalizedNameAndIdNot(TextNormalizer.normalize(name), id);
+    }
+
+    /**
+     * @param normalizedName name key built with {@link TextNormalizer#normalize(String)}
+     * @return {@code true} if a room has this key
+     */
+    boolean existsByNormalizedName(String normalizedName);
+
+    /**
+     * @param normalizedName name key built with {@link TextNormalizer#normalize(String)}
+     * @param id             id of the room to ignore
+     * @return {@code true} if another room has this key
+     */
+    boolean existsByNormalizedNameAndIdNot(String normalizedName, Long id);
 
     /**
      * Returns all rooms sorted by name (case-insensitive), then by id.
@@ -44,7 +62,7 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
      * @return the sorted rooms
      */
     @EntityGraph(attributePaths = {"building", "equipment"})
-    @Query("SELECT r FROM Room r ORDER BY LOWER(r.name), r.id")
+    @Query("SELECT r FROM Room r ORDER BY r.normalizedName, r.id")
     List<Room> findAllSortedByName();
 
     /**

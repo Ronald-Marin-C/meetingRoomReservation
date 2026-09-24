@@ -1,6 +1,7 @@
 package fr.emse.ismin.reservation.repositories;
 
 import fr.emse.ismin.reservation.models.Organizer;
+import fr.emse.ismin.reservation.models.TextNormalizer;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -21,7 +22,15 @@ public interface OrganizerRepository extends JpaRepository<Organizer, Long> {
      * @param email the email address to look for
      * @return {@code true} if the email is already taken
      */
-    boolean existsByEmailIgnoreCase(String email);
+    default boolean existsByEmailIgnoreCase(String email) {
+        return existsByNormalizedEmail(TextNormalizer.normalize(email));
+    }
+
+    /**
+     * @param normalizedEmail email key built with {@link TextNormalizer#normalize(String)}
+     * @return {@code true} if an organizer has this key
+     */
+    boolean existsByNormalizedEmail(String normalizedEmail);
 
     /**
      * Returns all organizers sorted by name (case-insensitive), then by id.
