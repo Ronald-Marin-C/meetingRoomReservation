@@ -37,3 +37,5 @@ build/
 java avance_compressed.pdf
 # SQLite database generated at runtime
 *.db
+# SQLite files created by the IntelliJ database tool
+*.sqlite
