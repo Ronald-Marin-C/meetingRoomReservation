@@ -12,6 +12,7 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -34,8 +35,13 @@ public class Room {
     @Column(columnDefinition = "INTEGER")
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(nullable = false, length = 100)
     private String name;
+
+    /** Lower-cased name, unique, used to compare and sort names without considering case. */
+    @Setter(AccessLevel.NONE)
+    @Column(name = "normalized_name", nullable = false, unique = true, length = 100)
+    private String normalizedName;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "building_id", nullable = false)
@@ -57,4 +63,14 @@ public class Room {
             joinColumns = @JoinColumn(name = "room_id"),
             inverseJoinColumns = @JoinColumn(name = "equipment_id"))
     private Set<Equipment> equipment = new HashSet<>();
+
+    /**
+     * Sets the name and keeps its normalized key in sync.
+     *
+     * @param name the new name
+     */
+    public void setName(String name) {
+        this.name = name;
+        this.normalizedName = TextNormalizer.normalize(name);
+    }
 }
