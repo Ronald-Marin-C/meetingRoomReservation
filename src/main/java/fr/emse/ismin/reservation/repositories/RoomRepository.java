@@ -57,6 +57,17 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
     boolean existsByNormalizedNameAndIdNot(String normalizedName, Long id);
 
     /**
+     * Returns a room with its building and equipment loaded, since both are
+     * always part of the API responses.
+     *
+     * @param id the room id
+     * @return the room, or empty if it does not exist
+     */
+    @Override
+    @EntityGraph(attributePaths = {"building", "equipment"})
+    Optional<Room> findById(Long id);
+
+    /**
      * Returns all rooms sorted by name (case-insensitive), then by id.
      *
      * @return the sorted rooms
