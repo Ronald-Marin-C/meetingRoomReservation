@@ -2,6 +2,7 @@ package fr.emse.ismin.reservation.repositories;
 
 import fr.emse.ismin.reservation.models.Organizer;
 import fr.emse.ismin.reservation.models.TextNormalizer;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -33,10 +34,12 @@ public interface OrganizerRepository extends JpaRepository<Organizer, Long> {
     boolean existsByNormalizedEmail(String normalizedEmail);
 
     /**
-     * Returns all organizers sorted by name (case-insensitive), then by id.
+     * Returns all organizers sorted by name (case-insensitive), then by id,
+     * with their building loaded in the same query.
      *
      * @return the sorted organizers
      */
+    @EntityGraph(attributePaths = "building")
     @Query("SELECT o FROM Organizer o ORDER BY LOWER(o.name), o.id")
     List<Organizer> findAllSortedByName();
 
