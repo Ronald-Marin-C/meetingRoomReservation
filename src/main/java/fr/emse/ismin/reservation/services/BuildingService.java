@@ -3,6 +3,7 @@ package fr.emse.ismin.reservation.services;
 import fr.emse.ismin.reservation.dtos.BuildingRequest;
 import fr.emse.ismin.reservation.exceptions.ConflictException;
 import fr.emse.ismin.reservation.exceptions.ErrorCode;
+import fr.emse.ismin.reservation.exceptions.InvalidFieldException;
 import fr.emse.ismin.reservation.exceptions.ResourceNotFoundException;
 import fr.emse.ismin.reservation.models.Building;
 import fr.emse.ismin.reservation.repositories.BuildingRepository;
@@ -63,6 +64,26 @@ public class BuildingService {
     public Building findById(Long buildingId) {
         return buildingRepository.findById(buildingId)
                 .orElseThrow(() -> ResourceNotFoundException.building(buildingId));
+    }
+
+    /**
+     * Returns the building of a location (room or organizer) after checking that
+     * the floor exists in it. Floors go from {@code 0} to {@code numberOfFloors - 1}.
+     *
+     * @param buildingId id of the building
+     * @param floor      floor inside the building
+     * @return the building
+     * @throws ResourceNotFoundException {@code BUILDING_NOT_FOUND} if the building does not exist
+     * @throws InvalidFieldException     {@code VALIDATION_ERROR} on {@code floor} if the floor does not exist
+     */
+    @Transactional(readOnly = true)
+    public Building findLocation(Long buildingId, Integer floor) {
+        Building building = findById(buildingId);
+        if (floor >= building.getNumberOfFloors()) {
+            throw new InvalidFieldException("floor", "doit être compris entre 0 et "
+                    + (building.getNumberOfFloors() - 1) + " pour ce bâtiment");
+        }
+        return building;
     }
 
     /**
