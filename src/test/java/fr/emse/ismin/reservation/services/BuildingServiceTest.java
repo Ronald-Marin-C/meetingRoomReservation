@@ -3,6 +3,7 @@ package fr.emse.ismin.reservation.services;
 import fr.emse.ismin.reservation.dtos.BuildingRequest;
 import fr.emse.ismin.reservation.exceptions.ConflictException;
 import fr.emse.ismin.reservation.exceptions.ErrorCode;
+import fr.emse.ismin.reservation.exceptions.InvalidFieldException;
 import fr.emse.ismin.reservation.exceptions.ResourceNotFoundException;
 import fr.emse.ismin.reservation.models.Building;
 import fr.emse.ismin.reservation.repositories.BuildingRepository;
@@ -172,6 +173,43 @@ class BuildingServiceTest {
 
         // THEN the update is accepted
         assertEquals(4, updated.getNumberOfFloors());
+    }
+
+    @Test
+    void testFindLocationOnGroundAndLastFloor() {
+        // GIVEN a building of 5 floors, numbered from 0 to 4
+        // WHEN locating something on the ground floor and on the last floor
+        Building groundFloor = buildingService.findLocation(BUILDING_ID, 0);
+        Building lastFloor = buildingService.findLocation(BUILDING_ID, 4);
+
+        // THEN both floors are accepted
+        assertEquals(building, groundFloor);
+        assertEquals(building, lastFloor);
+    }
+
+    @Test
+    void testFindLocationOnAFloorAboveTheBuilding() {
+        // GIVEN a building of 5 floors, numbered from 0 to 4
+        // WHEN locating something on floor 5
+        InvalidFieldException exception = assertThrows(InvalidFieldException.class,
+                () -> buildingService.findLocation(BUILDING_ID, 5));
+
+        // THEN the floor field is refused with the valid range
+        assertEquals(ErrorCode.VALIDATION_ERROR, exception.getCode());
+        assertEquals("doit être compris entre 0 et 4 pour ce bâtiment", exception.getFieldErrors().get("floor"));
+    }
+
+    @Test
+    void testFindLocationInABuildingThatDoesNotExist() {
+        // GIVEN no building with id 42
+        when(buildingRepository.findById(42L)).thenReturn(Optional.empty());
+
+        // WHEN locating something in it
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> buildingService.findLocation(42L, 0));
+
+        // THEN a BUILDING_NOT_FOUND error is raised before checking the floor
+        assertEquals(ErrorCode.BUILDING_NOT_FOUND, exception.getCode());
     }
 
     @Test
