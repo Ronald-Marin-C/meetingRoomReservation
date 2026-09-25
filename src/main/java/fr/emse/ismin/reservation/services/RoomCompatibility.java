@@ -1,10 +1,13 @@
 package fr.emse.ismin.reservation.services;
 
 import fr.emse.ismin.reservation.models.Equipment;
+import fr.emse.ismin.reservation.models.Reservation;
+import fr.emse.ismin.reservation.models.ReservationStatus;
 import fr.emse.ismin.reservation.models.Room;
 import fr.emse.ismin.reservation.models.RoomStatus;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Set;
 import java.util.SortedSet;
@@ -72,6 +75,22 @@ public class RoomCompatibility {
                 && hasCapacity(room, numberOfParticipants)
                 && findMissingEquipment(room, requiredEquipmentCodes).isEmpty()
                 && !busyRoomIds.contains(room.getId());
+    }
+
+    /**
+     * Tells whether an existing reservation blocks the period {@code [start, end[}.
+     * Only confirmed reservations block a room, and consecutive periods such as
+     * 10:00-11:00 and 11:00-12:00 do not overlap.
+     *
+     * @param existing an existing reservation
+     * @param start    start of the requested period
+     * @param end      end of the requested period
+     * @return {@code true} if the reservation is confirmed and overlaps the period
+     */
+    public boolean blocks(Reservation existing, Instant start, Instant end) {
+        return existing.getStatus() == ReservationStatus.CONFIRMED
+                && existing.getStart().isBefore(end)
+                && existing.getEnd().isAfter(start);
     }
 
     /**

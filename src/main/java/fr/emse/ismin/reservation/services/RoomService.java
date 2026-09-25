@@ -85,6 +85,14 @@ public class RoomService {
     }
 
     /**
+     * @return the rooms that are not in maintenance, with their building and equipment
+     */
+    @Transactional(readOnly = true)
+    public List<Room> findAllAvailable() {
+        return roomRepository.findByStatus(RoomStatus.AVAILABLE);
+    }
+
+    /**
      * Replaces the name, the location and the capacity of a room. The status and
      * the equipment are kept.
      *
