@@ -1,6 +1,7 @@
 package fr.emse.ismin.reservation.repositories;
 
 import fr.emse.ismin.reservation.models.Reservation;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -20,6 +22,17 @@ import java.util.Set;
  */
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
+
+    /**
+     * Returns a reservation with everything its API response needs: room,
+     * organizer, their buildings and the requested equipment.
+     *
+     * @param id the reservation id
+     * @return the reservation, or empty if it does not exist
+     */
+    @Override
+    @EntityGraph(attributePaths = {"room.building", "organizer.building", "requiredEquipment"})
+    Optional<Reservation> findById(Long id);
 
     /**
      * Returns the confirmed reservations of a room overlapping the given period,
@@ -70,6 +83,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      * @param to          keep only the reservations starting strictly before this date
      * @return the matching reservations
      */
+    @EntityGraph(attributePaths = {"room.building", "organizer.building", "requiredEquipment"})
     @Query("""
             SELECT r FROM Reservation r
             WHERE (:roomId IS NULL OR r.room.id = :roomId)
