@@ -56,6 +56,23 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
                                                   @Param("end") Instant end);
 
     /**
+     * Returns the confirmed reservations of every room overlapping the given
+     * period, with their room. Used by the automatic assignment, which checks
+     * the overlaps itself.
+     *
+     * @param start start of the requested period (inclusive)
+     * @param end   end of the requested period (exclusive)
+     * @return the overlapping confirmed reservations
+     */
+    @Query("""
+            SELECT r FROM Reservation r JOIN FETCH r.room
+            WHERE r.status = fr.emse.ismin.reservation.models.ReservationStatus.CONFIRMED
+              AND r.start < :end
+              AND r.end > :start
+            """)
+    List<Reservation> findConfirmedOverlapping(@Param("start") Instant start, @Param("end") Instant end);
+
+    /**
      * Returns the ids of every room having at least one confirmed reservation
      * overlapping the given period. Used to exclude busy rooms in a single query
      * when searching for available rooms.

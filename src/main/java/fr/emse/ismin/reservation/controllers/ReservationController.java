@@ -1,5 +1,6 @@
 package fr.emse.ismin.reservation.controllers;
 
+import fr.emse.ismin.reservation.dtos.AutomaticReservationRequest;
 import fr.emse.ismin.reservation.dtos.CreateReservationRequest;
 import fr.emse.ismin.reservation.dtos.ReservationResponse;
 import fr.emse.ismin.reservation.models.Reservation;
@@ -44,6 +45,24 @@ public class ReservationController {
         Reservation reservation = reservationService.create(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{reservationId}")
+                .buildAndExpand(reservation.getId())
+                .toUri();
+        return ResponseEntity.created(location).body(ReservationResponse.from(reservation));
+    }
+
+    /**
+     * Books the most suitable room, chosen by the application.
+     *
+     * @param request the reservation to create, without room
+     * @return 201 with the confirmed reservation and its URI in the {@code Location} header
+     */
+    @PostMapping("/automatic")
+    public ResponseEntity<ReservationResponse> createAutomatic(
+            @Valid @RequestBody AutomaticReservationRequest request) {
+        Reservation reservation = reservationService.createAutomatic(request);
+        // The new reservation lives under /api/reservations, not under /api/reservations/automatic
+        URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/api/reservations/{reservationId}")
                 .buildAndExpand(reservation.getId())
                 .toUri();
         return ResponseEntity.created(location).body(ReservationResponse.from(reservation));

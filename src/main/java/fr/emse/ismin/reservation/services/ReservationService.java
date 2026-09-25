@@ -1,5 +1,6 @@
 package fr.emse.ismin.reservation.services;
 
+import fr.emse.ismin.reservation.dtos.AutomaticReservationRequest;
 import fr.emse.ismin.reservation.dtos.CreateReservationRequest;
 import fr.emse.ismin.reservation.exceptions.ConflictException;
 import fr.emse.ismin.reservation.exceptions.ErrorCode;
@@ -25,8 +26,8 @@ import java.util.SortedSet;
 import java.util.stream.Collectors;
 
 /**
- * Business logic of the reservations: booking of a chosen room, listing with
- * filters, lookup and cancellation.
+ * Business logic of the reservations: booking of a chosen room, automatic
+ * booking of the most suitable room, listing with filters, lookup and cancellation.
  */
 @Service
 @RequiredArgsConstructor
@@ -38,6 +39,7 @@ public class ReservationService {
     private final EquipmentService equipmentService;
     private final ReservationPeriodValidator periodValidator;
     private final RoomCompatibility roomCompatibility;
+    private final RoomAllocator roomAllocator;
     private final Clock clock;
 
     /**
@@ -65,6 +67,37 @@ public class ReservationService {
 
         checkRoomCanHost(room, request.numberOfParticipants(), codesOf(requiredEquipment), start, end);
         return save(request.title(), room, organizer, start, end, request.numberOfParticipants(), requiredEquipment);
+    }
+
+    /**
+     * Books the most suitable room, chosen by {@link RoomAllocator}. The choice
+     * and the booking happen in the same transaction, so the room cannot be
+     * taken by another reservation in between.
+     *
+     * @param request the reservation to create, without room
+     * @return the confirmed reservation in the assigned room
+     * @throws InvalidReservationPeriodException if the period is invalid
+     * @throws ResourceNotFoundException         if the organizer or an equipment code does not exist
+     * @throws ConflictException                 {@code NO_COMPATIBLE_ROOM} if no room can host the reservation;
+     *                                           nothing is created in that case
+     */
+    @Transactional
+    public Reservation createAutomatic(AutomaticReservationRequest request) {
+        Instant start = request.start().toInstant();
+        Instant end = request.end().toInstant();
+        periodValidator.validate(start, end);
+
+        Organizer organizer = organizerService.findById(request.organizerId());
+        Set<Equipment> requiredEquipment = equipmentService.findAllByCodes(request.requiredEquipmentCodes());
+
+        RoomAssignment assignment = roomAllocator.allocate(roomService.findAllAvailable(),
+                        reservationRepository.findConfirmedOverlapping(start, end), organizer,
+                        request.numberOfParticipants(), codesOf(requiredEquipment), start, end)
+                .orElseThrow(() -> new ConflictException(ErrorCode.NO_COMPATIBLE_ROOM,
+                        "Aucune salle disponible ne correspond aux critères demandés"));
+
+        return save(request.title(), assignment.room(), organizer, start, end,
+                request.numberOfParticipants(), requiredEquipment);
     }
 
     /**
