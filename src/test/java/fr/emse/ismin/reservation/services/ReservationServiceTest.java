@@ -1,5 +1,6 @@
 package fr.emse.ismin.reservation.services;
 
+import fr.emse.ismin.reservation.dtos.AutomaticReservationRequest;
 import fr.emse.ismin.reservation.dtos.CreateReservationRequest;
 import fr.emse.ismin.reservation.exceptions.ConflictException;
 import fr.emse.ismin.reservation.exceptions.ErrorCode;
@@ -73,8 +74,10 @@ class ReservationServiceTest {
 
     @BeforeEach
     void setUp() {
+        RoomCompatibility roomCompatibility = new RoomCompatibility();
         reservationService = new ReservationService(reservationRepository, roomService, organizerService,
-                equipmentService, periodValidator, new RoomCompatibility(), Clock.fixed(NOW, ZoneOffset.UTC));
+                equipmentService, periodValidator, roomCompatibility, new RoomAllocator(roomCompatibility),
+                Clock.fixed(NOW, ZoneOffset.UTC));
 
         Building building = new Building();
         building.setId(1L);
@@ -217,6 +220,61 @@ class ReservationServiceTest {
     }
 
     @Test
+    void testCreateAutomaticReservationInTheBestRoom() {
+        // GIVEN two available rooms for 20 people: Orion (30 seats, one floor away, score 20)
+        // and Vega (20 seats, same floor as the organizer, score 0)
+        Room vega = new Room();
+        vega.setId(8L);
+        vega.setName("Vega");
+        vega.setBuilding(room.getBuilding());
+        vega.setFloor(0);
+        vega.setCapacity(20);
+        when(roomService.findAllAvailable()).thenReturn(List.of(room, vega));
+        when(reservationRepository.findConfirmedOverlapping(START.toInstant(), END.toInstant()))
+                .thenReturn(List.of());
+
+        // WHEN asking for an automatic reservation
+        Reservation reservation = reservationService.createAutomatic(automaticRequest(20));
+
+        // THEN Vega, the room with the lowest score, is booked
+        assertEquals(vega, reservation.getRoom());
+        assertEquals(ReservationStatus.CONFIRMED, reservation.getStatus());
+        assertEquals(NOW, reservation.getCreatedAt());
+    }
+
+    @Test
+    void testCreateAutomaticReservationWhenNoRoomIsCompatible() {
+        // GIVEN a single room of 30 seats
+        when(roomService.findAllAvailable()).thenReturn(List.of(room));
+        when(reservationRepository.findConfirmedOverlapping(START.toInstant(), END.toInstant()))
+                .thenReturn(List.of());
+
+        // WHEN asking for an automatic reservation for 50 people
+        ConflictException exception = assertThrows(ConflictException.class,
+                () -> reservationService.createAutomatic(automaticRequest(50)));
+
+        // THEN no room is found and nothing is saved
+        assertEquals(ErrorCode.NO_COMPATIBLE_ROOM, exception.getCode());
+        assertEquals("Aucune salle disponible ne correspond aux critères demandés", exception.getMessage());
+        verify(reservationRepository, never()).save(any());
+    }
+
+    @Test
+    void testCreateAutomaticReservationForAnUnknownOrganizer() {
+        // GIVEN no organizer with id 99
+        when(organizerService.findById(99L)).thenThrow(ResourceNotFoundException.organizer(99L));
+        AutomaticReservationRequest request = new AutomaticReservationRequest("Réunion", 99L, START, END, 5, null);
+
+        // WHEN asking for an automatic reservation
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> reservationService.createAutomatic(request));
+
+        // THEN the organizer error is returned before looking for rooms
+        assertEquals(ErrorCode.ORGANIZER_NOT_FOUND, exception.getCode());
+        verify(roomService, never()).findAllAvailable();
+    }
+
+    @Test
     void testListReservationsWithFromAfterTo() {
         // GIVEN a filter whose from is after its to
         Instant from = Instant.parse("2026-10-16T00:00:00Z");
@@ -272,6 +330,11 @@ class ReservationServiceTest {
         // THEN a RESERVATION_NOT_FOUND error gives the missing id
         assertEquals(ErrorCode.RESERVATION_NOT_FOUND, exception.getCode());
         assertEquals(42L, exception.getDetails().get("reservationId"));
+    }
+
+    private AutomaticReservationRequest automaticRequest(int numberOfParticipants) {
+        return new AutomaticReservationRequest("Soutenance de projet", ORGANIZER_ID, START, END,
+                numberOfParticipants, null);
     }
 
     private CreateReservationRequest request(int numberOfParticipants, List<String> equipmentCodes) {
