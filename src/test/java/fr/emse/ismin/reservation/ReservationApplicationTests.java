@@ -12,15 +12,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @ActiveProfiles("test")
 class ReservationApplicationTests {
 
-	@Autowired
-	private ApplicationContext context;
+    @Autowired
+    private ApplicationContext context;
 
-	@Test
-	void contextLoads() {
-		// GIVEN the application configured with the in-memory test database
-		// WHEN Spring starts it (Flyway migrations and Hibernate schema validation included)
-		// THEN the context is available
-		assertNotNull(context);
-	}
+    @Test
+    void contextLoads() {
+        // GIVEN the application configured with the in-memory test database
+        // WHEN Spring starts it (Flyway migrations and Hibernate schema validation included)
+        // THEN the context is available
+        assertNotNull(context);
+    }
 
 }

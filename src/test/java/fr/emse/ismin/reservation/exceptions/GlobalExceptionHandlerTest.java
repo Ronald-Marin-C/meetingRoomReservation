@@ -211,7 +211,8 @@ class GlobalExceptionHandlerTest {
         }
 
         @GetMapping("/test/search")
-        List<String> search(@RequestParam @Min(value = 1, message = "doit être strictement positive") Integer capacity) {
+        List<String> search(
+                @RequestParam @Min(value = 1, message = "doit être strictement positive") Integer capacity) {
             return List.of();
         }
     }
