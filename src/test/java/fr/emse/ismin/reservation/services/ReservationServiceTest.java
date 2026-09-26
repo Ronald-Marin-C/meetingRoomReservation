@@ -109,7 +109,8 @@ class ReservationServiceTest {
         lenient().when(organizerService.findById(ORGANIZER_ID)).thenReturn(organizer);
         lenient().when(equipmentService.findAllByCodes(null)).thenReturn(Set.of());
         lenient().when(equipmentService.findAllByCodes(List.of("PROJECTOR"))).thenReturn(Set.of(projector));
-        lenient().when(reservationRepository.findConflictingReservations(anyLong(), any(), any())).thenReturn(List.of());
+        lenient().when(reservationRepository.findConflictingReservations(anyLong(), any(), any()))
+                .thenReturn(List.of());
         lenient().when(reservationRepository.save(any(Reservation.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }
