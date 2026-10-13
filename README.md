@@ -1,6 +1,6 @@
 # Meeting Room Reservation API
 
-[![CI](https://github.com/CyprienJ/meetingRoomReservation-RMA/actions/workflows/ci.yml/badge.svg)](https://github.com/CyprienJ/meetingRoomReservation-RMA/actions/workflows/ci.yml)
+[![CI](https://github.com/Ronald-Marin-C/meetingRoomReservation/actions/workflows/ci.yml/badge.svg)](https://github.com/Ronald-Marin-C/meetingRoomReservation/actions/workflows/ci.yml)
 
 REST API that lets a university manage its buildings, rooms, equipment and organizers,
 and book meeting rooms, either a room chosen by the user or the most suitable room
